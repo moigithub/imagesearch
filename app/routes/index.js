@@ -12,6 +12,9 @@ module.exports = function (app) {
                 term : req.params.input,
                 when : new Date()
             };
+
+            var offset= req.query.offset || 0;
+
             Images.create(input, function(err, Image) {
                 if(err) { return handleError(res, err); }
 
@@ -22,7 +25,7 @@ module.exports = function (app) {
                 console.log("Image>>",JSON.stringify(Image));
                 console.log("input>>",JSON.stringify(input));
 
-                images.search(input.term)
+                images.search(input.term, 'top', offset)
                     .done(function(data){
                         return res.status(201).json(data); 
                     })
