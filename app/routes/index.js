@@ -34,7 +34,7 @@ module.exports = function (app) {
 
     app.route('/api/latest/imagesearch') // latest 10 searches
         .get( function (req, res) {
-            var query = Images.find().sort({"when":-1}).limit(10);
+            var query = Images.find({},{_id:0, term:1, when:1}).sort({"when":-1}).limit(10);
             query.exec(function(err, results){
                 if(err) { return handleError(res, err); }
                 return res.json(results);

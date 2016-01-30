@@ -5,7 +5,7 @@ var Schema = mongoose.Schema;
 
 var Images = new Schema({
     term: String,
-    when: String
+    when: Date
 });
 
 module.exports = mongoose.model('Images', Images);
