@@ -1,57 +1,50 @@
 'use strict';
+var Imgur = require('imgur-search');
+var Images = require('../models/Images');
 
-var path = process.cwd();
-var ClickHandler = require(path + '/app/controllers/clickHandler.server.js');
 
-module.exports = function (app, passport) {
+module.exports = function (app) {
+    app.route('/api/imagesearch/:input')
+        .get( function (req, res) {
 
-	function isLoggedIn (req, res, next) {
-		if (req.isAuthenticated()) {
-			return next();
-		} else {
-			res.redirect('/login');
-		}
-	}
+            // save input on database
+            var input = {
+                term : req.params.input,
+                when : new Date()
+            };
+            Images.create(input, function(err, Image) {
+                if(err) { return handleError(res, err); }
 
-	var clickHandler = new ClickHandler();
+                // once saved, call imgur api and send to client the result
+                //https://api.imgur.com/endpoints/gallery#gallery-search
+                var images = new Imgur('4fb9f0926b919c7');
+                ///Imgur.prototype.search = function (query, sort, page) 
+                console.log("Image>>",JSON.stringify(Image));
+                console.log("input>>",JSON.stringify(input));
 
-	app.route('/')
-		.get(isLoggedIn, function (req, res) {
-			res.sendFile(path + '/public/index.html');
-		});
+                images.search(input.term)
+                    .done(function(data){
+                        return res.status(201).json(data); 
+                    })
+                    .fail(function(error){
+                        return handleError(res, error);
+                    });
+            });
+        });
 
-	app.route('/login')
-		.get(function (req, res) {
-			res.sendFile(path + '/public/login.html');
-		});
-
-	app.route('/logout')
-		.get(function (req, res) {
-			req.logout();
-			res.redirect('/login');
-		});
-
-	app.route('/profile')
-		.get(isLoggedIn, function (req, res) {
-			res.sendFile(path + '/public/profile.html');
-		});
-
-	app.route('/api/:id')
-		.get(isLoggedIn, function (req, res) {
-			res.json(req.user.github);
-		});
-
-	app.route('/auth/github')
-		.get(passport.authenticate('github'));
-
-	app.route('/auth/github/callback')
-		.get(passport.authenticate('github', {
-			successRedirect: '/',
-			failureRedirect: '/login'
-		}));
-
-	app.route('/api/:id/clicks')
-		.get(isLoggedIn, clickHandler.getClicks)
-		.post(isLoggedIn, clickHandler.addClick)
-		.delete(isLoggedIn, clickHandler.resetClicks);
+    app.route('/api/latest/imagesearch') // latest 10 searches
+        .get( function (req, res) {
+            var query = Images.find().sort({"when":-1}).limit(10);
+            query.exec(function(err, results){
+                if(err) { return handleError(res, err); }
+                return res.json(results);
+            });
+            
+        });
 };
+
+
+function handleError(res, err) {
+//  console.log("error");
+  return res.status(500).send(err);
+}
